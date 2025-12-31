@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Generated files
+*_IMG.md
+*_IMG_CODE.md
+*_IMG/
+*_IMG_CODE/
+*_screenshots/
+
+# Output files (optional - uncomment if you don't want to track outputs)
+# *.pdf
+# *.docx
+
+# Temp files
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*

@@ -1,0 +1,26 @@
+{
+  "name": "md-converter",
+  "version": "2.0.0",
+  "description": "Convert Markdown to PDF/DOCX with Chinese support, Mermaid diagrams, and code syntax highlighting",
+  "main": "convertAll.js",
+  "scripts": {
+    "convert": "node convertAll.js",
+    "pdf": "node convertAll.js --format pdf",
+    "docx": "node convertAll.js --format docx"
+  },
+  "keywords": [
+    "markdown",
+    "pdf",
+    "docx",
+    "chinese",
+    "mermaid",
+    "converter"
+  ],
+  "dependencies": {
+    "docx": "^9.5.1",
+    "marked": "^11.2.0",
+    "pdf-poppler": "^0.2.3",
+    "puppeteer": "^24.0.0",
+    "sharp": "^0.34.5"
+  }
+}
