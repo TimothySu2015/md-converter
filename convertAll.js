@@ -14,7 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync, spawn } = require('child_process');
+const { execSync } = require('child_process');
 
 // 解析命令列參數
 const args = process.argv.slice(2);
@@ -25,6 +25,7 @@ const format = args.includes('--format')
 const skipMermaid = args.includes('--skip-mermaid');
 const skipCode = args.includes('--skip-code');
 const verbose = args.includes('--verbose');
+const keepImages = args.includes('--keep-images');
 
 if (!inputFile) {
   console.log(`
@@ -39,6 +40,7 @@ if (!inputFile) {
   --format <pdf|docx|both>  輸出格式 (預設: both)
   --skip-mermaid            跳過 Mermaid 預處理
   --skip-code               跳過程式碼區塊預處理
+  --keep-images             保留中間產生的圖檔目錄
   --verbose                 顯示詳細輸出
 
 範例:
@@ -49,8 +51,10 @@ if (!inputFile) {
 流程說明:
   ┌─────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌────────────┐
   │  原始 MD    │ -> │ Mermaid → SVG   │ -> │ Code → PNG      │ -> │ PDF/DOCX   │
-  │  input.md   │    │ input_IMG.md    │    │ input_IMG_CODE  │    │ 最終輸出   │
+  │  input.md   │    │ (自動處理)      │    │ (自動處理)      │    │ 最終輸出   │
   └─────────────┘    └─────────────────┘    └─────────────────┘    └────────────┘
+
+  * 中間檔案會在轉換完成後自動清理
 `);
   process.exit(1);
 }
@@ -126,19 +130,34 @@ function fileContains(filePath, pattern) {
   }
 }
 
+/**
+ * 刪除目錄 (使用 Node.js 內建功能)
+ */
+function removeDirectory(dirPath) {
+  if (fs.existsSync(dirPath)) {
+    fs.rmSync(dirPath, { recursive: true, force: true });
+  }
+}
+
 // 主流程
 async function main() {
   let currentFile = path.resolve(inputFile);
   const steps = [];
+  const intermediateFiles = []; // 用來追蹤產生的中間檔案
+  const imageDirectories = [];  // 用來追蹤產生的圖檔目錄
 
   // 步驟 1: 檢查是否需要 Mermaid 預處理
   const hasMermaid = fileContains(currentFile, /```mermaid/i);
 
   if (hasMermaid && !skipMermaid) {
+    const mermaidOutput = path.join(path.dirname(currentFile), path.basename(currentFile, '.md') + '_IMG.md');
+    const mermaidImgDir = path.join(path.dirname(currentFile), path.basename(currentFile, '.md') + '_IMG');
+    intermediateFiles.push(mermaidOutput);
+    imageDirectories.push(mermaidImgDir);
     steps.push({
       name: 'Mermaid 預處理',
-      command: `node "${path.join(scriptDir, 'lib', 'mermaidToImage.js')}" "${currentFile}"`,
-      outputFile: currentFile.replace('.md', '_IMG.md')
+      command: `node "${path.join(scriptDir, 'lib', 'mermaidToImage.js')}" "${currentFile}" "${mermaidOutput}"`,
+      outputFile: mermaidOutput
     });
   } else if (hasMermaid && skipMermaid) {
     console.log('⏭ 跳過 Mermaid 預處理 (--skip-mermaid)');
@@ -152,10 +171,14 @@ async function main() {
 
   if (needsCodePreprocess) {
     const inputForCode = steps.length > 0 ? steps[steps.length - 1].outputFile : currentFile;
+    const codeOutput = path.join(path.dirname(inputForCode), path.basename(inputForCode, '.md') + '_CODE.md');
+    const codeImgDir = path.join(path.dirname(inputForCode), path.basename(inputForCode, '.md') + '_CODE');
+    intermediateFiles.push(codeOutput);
+    imageDirectories.push(codeImgDir);
     steps.push({
       name: '程式碼區塊預處理',
-      command: `node "${path.join(scriptDir, 'lib', 'codeBlockToImage.js')}" "${inputForCode}"`,
-      outputFile: inputForCode.replace('.md', '_CODE.md')
+      command: `node "${path.join(scriptDir, 'lib', 'codeBlockToImage.js')}" "${inputForCode}" "${codeOutput}"`,
+      outputFile: codeOutput
     });
   } else if (hasCodeBlocks && skipCode) {
     console.log('⏭ 跳過程式碼區塊預處理 (--skip-code)');
@@ -174,9 +197,8 @@ async function main() {
 
   if (format === 'pdf' || format === 'both') {
     // PDF 使用 _IMG.md (有 Mermaid 轉圖片的版本)
-    const pdfInput = hasMermaid && !skipMermaid
-      ? inputFile.replace('.md', '_IMG.md')
-      : inputFile;
+    const mermaidStep = steps.find(s => s.name === 'Mermaid 預處理');
+    const pdfInput = mermaidStep ? mermaidStep.outputFile : path.resolve(inputFile);
     const pdfOutput = path.join(baseDir, `${baseName}.pdf`);
 
     const success = runCommand(
@@ -208,19 +230,59 @@ async function main() {
     console.log(`${status} ${r.format}: ${r.output}${exists}`);
   });
 
-  // 列出產生的所有檔案
+  // 列出產生的最終檔案
   console.log(`\n產生的檔案:`);
-  const generatedFiles = [
-    inputFile.replace('.md', '_IMG.md'),
-    inputFile.replace('.md', '_IMG_CODE.md'),
+  const finalFiles = [
     path.join(baseDir, `${baseName}.pdf`),
     path.join(baseDir, `${baseName}.docx`)
   ].filter(f => fs.existsSync(f));
 
-  generatedFiles.forEach(f => {
+  finalFiles.forEach(f => {
     const size = (fs.statSync(f).size / 1024).toFixed(1);
     console.log(`  📄 ${path.basename(f)} (${size} KB)`);
   });
+
+  // 清理中間檔案
+  let cleanedFiles = 0;
+  for (const f of intermediateFiles) {
+    if (fs.existsSync(f)) {
+      try {
+        fs.unlinkSync(f);
+        cleanedFiles++;
+      } catch (err) {
+        console.warn(`  ⚠ 無法刪除中間檔案: ${path.basename(f)}`);
+      }
+    }
+  }
+
+  // 清理圖檔目錄（除非指定 --keep-images）
+  let cleanedDirs = 0;
+  if (!keepImages) {
+    for (const dir of imageDirectories) {
+      if (fs.existsSync(dir)) {
+        try {
+          removeDirectory(dir);
+          cleanedDirs++;
+        } catch (err) {
+          console.warn(`  ⚠ 無法刪除圖檔目錄: ${path.basename(dir)}`);
+        }
+      }
+    }
+  }
+
+  if (cleanedFiles > 0 || cleanedDirs > 0) {
+    const parts = [];
+    if (cleanedFiles > 0) parts.push(`${cleanedFiles} 個中間檔案`);
+    if (cleanedDirs > 0) parts.push(`${cleanedDirs} 個圖檔目錄`);
+    console.log(`\n🧹 已清理 ${parts.join('、')}`);
+  }
+
+  if (keepImages && imageDirectories.length > 0) {
+    console.log(`\n📁 保留的圖檔目錄:`);
+    imageDirectories.filter(d => fs.existsSync(d)).forEach(d => {
+      console.log(`  ${path.basename(d)}/`);
+    });
+  }
 
   console.log(`\n${'═'.repeat(60)}`);
   console.log('✓ 全部完成！');
