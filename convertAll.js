@@ -92,7 +92,8 @@ function runCommand(command, description) {
       encoding: 'utf8',
       stdio: verbose ? 'inherit' : 'pipe',
       cwd: scriptDir,
-      timeout: 300000 // 5 分鐘超時
+      timeout: 300000, // 5 分鐘超時
+      maxBuffer: 1024 * 1024 * 10 // 增加 Buffer 到 10MB，避免 log 過多導致崩潰
     });
     if (!verbose && output) {
       // 只顯示關鍵訊息

@@ -17,10 +17,13 @@
     "converter"
   ],
   "dependencies": {
+    "@fontsource/noto-sans-tc": "^5.2.8",
+    "@fontsource/noto-serif-tc": "^5.2.8",
     "docx": "^9.5.1",
     "marked": "^15.0.6",
     "mermaid": "^11.12.2",
     "pdf-poppler": "^0.2.3",
+    "prismjs": "^1.30.0",
     "puppeteer": "^24.0.0",
     "sharp": "^0.34.5"
   }
