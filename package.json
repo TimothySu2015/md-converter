@@ -1,6 +1,6 @@
 {
   "name": "md-converter",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Convert Markdown to PDF/DOCX with Chinese support, Mermaid diagrams, and code syntax highlighting",
   "main": "convertAll.js",
   "scripts": {
