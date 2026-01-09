@@ -21,9 +21,10 @@ node convertAll.js input.md --format pdf
 # Convert to DOCX only
 node convertAll.js input.md --format docx
 
-# Skip preprocessing steps
+# Skip preprocessing steps (these options are ESSENTIAL - DO NOT REMOVE)
 node convertAll.js input.md --skip-mermaid  # Skip Mermaid processing
-node convertAll.js input.md --skip-code     # Skip code block processing
+node convertAll.js input.md --skip-code     # Skip code block processing (DOCX)
+node convertAll.js input.md --keep-images   # Keep intermediate image directories
 node convertAll.js input.md --verbose       # Show detailed output
 
 # Run individual preprocessing steps
@@ -93,3 +94,20 @@ input.docx            # DOCX output
 | `PAGE_BREAK_FORCE_H2` | true | Force page break before H2 |
 | `PAGE_BREAK_LARGE_CONTENT` | 900 | Large content threshold (px) |
 | `PAGE_BREAK_DEBUG` | false | Debug mode |
+
+## Important CLI Options (DO NOT REMOVE)
+
+The following CLI options in `convertAll.js` are **essential features** and must NOT be removed during refactoring:
+
+| Option | Purpose |
+|--------|---------|
+| `--skip-mermaid` | Skip Mermaid diagram processing (for debugging or pre-processed files) |
+| `--skip-code` | Skip code block to image conversion (DOCX will use plain text) |
+| `--keep-images` | Keep intermediate image directories (for debugging or reuse) |
+| `--verbose` | Show detailed output for debugging |
+
+**Why these options are important:**
+1. **Debugging**: When conversion fails, these options help isolate which stage is causing issues
+2. **Pre-processed files**: When files are already processed, avoid redundant processing
+3. **Image reuse**: Keep generated images for other purposes (documentation, presentations)
+4. **Performance**: Skip unnecessary processing when only specific output is needed

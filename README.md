@@ -6,7 +6,6 @@
 
 ```bash
 # 安裝依賴
-cd .claude/skills/md-converter
 npm install
 
 # 轉換為 PDF 和 DOCX
@@ -33,6 +32,7 @@ node convertAll.js input.md --format docx
 | 封面頁 | - | ✓ |
 | 頁首頁尾 | ✓ | ✓ |
 | 表格樣式 | ✓ | ✓ |
+| 網址圖片（自動下載嵌入） | ✓ | ✓ |
 | HackMD 語法 (`:::info`, `==標記==`) | - | ✓ |
 | 自訂樣式 | ✓ | ✓ |
 
@@ -52,7 +52,8 @@ node convertAll.js <input.md> [選項]
 | `--format docx` | 僅輸出 DOCX |
 | `--format both` | 同時輸出 PDF 和 DOCX（預設） |
 | `--skip-mermaid` | 跳過 Mermaid 預處理（無圖表時可加速） |
-| `--skip-code` | 跳過程式碼區塊預處理（僅 PDF 時可加速） |
+| `--skip-code` | 跳過程式碼區塊轉圖片（DOCX 將使用純文字程式碼） |
+| `--keep-images` | 保留中間產生的圖檔目錄（預設會自動清理） |
 | `--verbose` | 顯示詳細輸出 |
 
 ### 使用範例
@@ -69,6 +70,9 @@ node convertAll.js guide.md --format docx
 
 # 無 Mermaid 圖表時加速
 node convertAll.js report.md --skip-mermaid
+
+# 保留中間圖檔（用於除錯或重複使用）
+node convertAll.js doc.md --keep-images
 
 # 顯示完整處理過程
 node convertAll.js doc.md --verbose
@@ -89,11 +93,12 @@ node convertAll.js doc.md --verbose
 
 ```
 input.md              # 原始檔案
-input_IMG/            # Mermaid 圖片目錄（自動產生）
-input_IMG_CODE/       # 程式碼圖片目錄（自動產生）
 input.pdf             # PDF 輸出
 input.docx            # DOCX 輸出
 ```
+
+> **注意**：中間產生的圖檔目錄（`input_IMG/`、`input_IMG_CODE/`）會在轉換完成後**自動清理**。
+> 如需保留這些圖檔，請使用 `--keep-images` 選項。
 
 ---
 
